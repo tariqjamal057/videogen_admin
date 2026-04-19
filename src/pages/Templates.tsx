@@ -17,6 +17,7 @@ interface Template {
     prompt: string;
     image: string;
     inputType: string;
+    templateType: string;
     noOfInput: number;
 }
 
@@ -43,6 +44,7 @@ const Templates: React.FC = () => {
         prompt: '',
         image: '',
         inputType: 'image',
+        templateType: 'video',
         noOfInput: 1,
     });
 
@@ -95,6 +97,7 @@ const Templates: React.FC = () => {
                 prompt: template.prompt,
                 image: template.image,
                 inputType: template.inputType,
+                templateType: template.templateType || 'video',
                 noOfInput: template.noOfInput,
             });
 
@@ -116,6 +119,7 @@ const Templates: React.FC = () => {
                 prompt: '',
                 image: '',
                 inputType: 'image',
+                templateType: 'video',
                 noOfInput: 1,
             });
             setImagePreview(null);
@@ -156,6 +160,7 @@ const Templates: React.FC = () => {
             submitData.append('description', formData.description);
             submitData.append('prompt', formData.prompt);
             submitData.append('inputType', formData.inputType);
+            submitData.append('templateType', formData.templateType);
             submitData.append('noOfInput', formData.noOfInput.toString());
 
             if (imageFile) {
@@ -292,9 +297,15 @@ const Templates: React.FC = () => {
                                     </div>
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-                                        <div style={{ fontSize: '0.8125rem' }}>
-                                            <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Input:</span>
-                                            <span style={{ fontWeight: 600 }}>{template.inputType} ({template.noOfInput})</span>
+                                        <div style={{ fontSize: '0.8125rem', display: 'flex', gap: '1rem' }}>
+                                            <div>
+                                                <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Type:</span>
+                                                <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{template.templateType || 'video'}</span>
+                                            </div>
+                                            <div>
+                                                <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Input:</span>
+                                                <span style={{ fontWeight: 600 }}>{template.inputType} ({template.noOfInput})</span>
+                                            </div>
                                         </div>
                                         <div className="action-btns">
                                             <button className="btn btn-secondary btn-sm" onClick={() => handleOpenModal(template)}>
@@ -424,7 +435,19 @@ const Templates: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Template Type</label>
+                            <select
+                                className="input-field"
+                                value={formData.templateType}
+                                onChange={(e) => setFormData({ ...formData, templateType: e.target.value })}
+                                disabled={isActionLoading}
+                            >
+                                <option value="video">Video</option>
+                                <option value="image">Image</option>
+                            </select>
+                        </div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Input Type</label>
                             <select
