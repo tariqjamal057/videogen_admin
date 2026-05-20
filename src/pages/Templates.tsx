@@ -10,15 +10,16 @@ interface Template {
         _id: string;
         categoryName?: string;
         name?: string;
-    };
+    } | null;
     categoryName?: string;
     name: string;
-    description: string;
     prompt: string;
     image: string;
     inputType: string;
     templateType: string;
     noOfInput: number;
+    isPrimary?: boolean;
+    createdAt?: string;
 }
 
 interface Category {
@@ -37,15 +38,16 @@ const Templates: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+    const [activeTab, setActiveTab] = useState<'video' | 'image'>('video');
     const [formData, setFormData] = useState({
         name: '',
         categoryId: '',
-        description: '',
         prompt: '',
         image: '',
         inputType: 'image',
-        templateType: 'video',
+        templateType: 'video' as 'video' | 'image',
         noOfInput: 1,
+        isPrimary: false,
     });
 
     useEffect(() => {
@@ -86,23 +88,23 @@ const Templates: React.FC = () => {
             setEditingTemplate(template);
 
             // Robust category ID extraction
-            const categoryId = typeof template.categoryId === 'object'
+            const categoryId = template.categoryId && typeof template.categoryId === 'object'
                 ? template.categoryId._id
-                : template.categoryId;
+                : (template.categoryId || '');
 
             setFormData({
                 name: template.name,
-                categoryId: categoryId,
-                description: template.description,
+                categoryId: categoryId as string,
                 prompt: template.prompt,
                 image: template.image,
-                inputType: template.inputType,
-                templateType: template.templateType || 'video',
-                noOfInput: template.noOfInput,
+                inputType: template.inputType || 'image',
+                templateType: (template.templateType as 'video' | 'image') || 'video',
+                noOfInput: template.noOfInput || 1,
+                isPrimary: template.isPrimary || false,
             });
 
             // Set preview
-            if (template.image) {
+            if (template.image && typeof template.image === 'string') {
                 const isExternal = template.image.startsWith('http://') || template.image.startsWith('https://');
                 setImagePreview(isExternal ? template.image : `${baseURL}${template.image.startsWith('/') ? '' : '/'}${template.image}`);
             } else {
@@ -115,12 +117,12 @@ const Templates: React.FC = () => {
             setFormData({
                 name: '',
                 categoryId: '',
-                description: '',
                 prompt: '',
                 image: '',
                 inputType: 'image',
-                templateType: 'video',
+                templateType: activeTab,
                 noOfInput: 1,
+                isPrimary: false,
             });
             setImagePreview(null);
             setIsModalOpen(true);
@@ -156,10 +158,16 @@ const Templates: React.FC = () => {
         try {
             const submitData = new FormData();
             submitData.append('name', formData.name);
-            submitData.append('categoryId', formData.categoryId);
-            submitData.append('description', formData.description);
+            if (formData.templateType === 'image') {
+                submitData.append('categoryId', formData.categoryId);
+                submitData.append('isPrimary', formData.isPrimary.toString());
+            } else {
+                // For video templates, explicitly send empty category
+                submitData.append('categoryId', '');
+                submitData.append('isPrimary', 'false');
+            }
             submitData.append('prompt', formData.prompt);
-            submitData.append('inputType', formData.inputType);
+            submitData.append('inputType', 'image');
             submitData.append('templateType', formData.templateType);
             submitData.append('noOfInput', formData.noOfInput.toString());
 
@@ -212,25 +220,68 @@ const Templates: React.FC = () => {
         }
     };
 
-    const filteredTemplates = templates.filter(t => {
-        const catName = typeof t.categoryId === 'object'
-            ? (t.categoryId.categoryName || t.categoryId.name)
-            : (t.categoryName || '');
+    const filteredTemplates = templates
+        .filter(t => {
+            const matchesTab = (t.templateType || 'video') === activeTab;
+            if (!matchesTab) return false;
 
-        return t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (catName || '').toLowerCase().includes(searchQuery.toLowerCase());
-    });
+            const catName = t.categoryId && typeof t.categoryId === 'object'
+                ? (t.categoryId.categoryName || t.categoryId.name)
+                : (t.categoryName || '');
+
+            return t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (catName || '').toLowerCase().includes(searchQuery.toLowerCase());
+        })
+        .sort((a, b) => {
+            // Ensure latest first by createdAt
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
 
     return (
         <div className="page-container animate-fade-in">
             <div className="page-header">
                 <div className="header-info">
-                    <h2>Video Templates</h2>
+                    <h2>Templates</h2>
                     <p>Manage AI generation presets and inputs</p>
                 </div>
                 <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={isLoading}>
                     <Plus size={18} />
-                    New Template
+                    New {activeTab === 'video' ? 'Video' : 'Image'} Template
+                </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                <button 
+                    onClick={() => setActiveTab('video')}
+                    style={{ 
+                        padding: '0.75rem 1.5rem', 
+                        background: 'none', 
+                        border: 'none', 
+                        color: activeTab === 'video' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        borderBottom: activeTab === 'video' ? '2px solid var(--accent-primary)' : 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    Video Templates
+                </button>
+                <button 
+                    onClick={() => setActiveTab('image')}
+                    style={{ 
+                        padding: '0.75rem 1.5rem', 
+                        background: 'none', 
+                        border: 'none', 
+                        color: activeTab === 'image' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        borderBottom: activeTab === 'image' ? '2px solid var(--accent-primary)' : 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    Image Templates
                 </button>
             </div>
 
@@ -258,26 +309,36 @@ const Templates: React.FC = () => {
                             <div key={template._id} className="template-row card" style={{ padding: '1.25rem' }}>
                                 <div className="template-preview" style={{ position: 'relative', overflow: 'hidden', borderRadius: '0.5rem', aspectRatio: '16/9' }}>
                                     <img
-                                        src={(template.image.startsWith('http://') || template.image.startsWith('https://')) ? template.image : `${baseURL}${template.image.startsWith('/') ? '' : '/'}${template.image}`}
+                                        src={template.image && typeof template.image === 'string'
+                                            ? ((template.image.startsWith('http://') || template.image.startsWith('https://'))
+                                                ? template.image
+                                                : `${baseURL}${template.image.startsWith('/') ? '' : '/'}${template.image}`)
+                                            : ''}
                                         alt={template.name}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
                                     <div className="preview-overlay">
                                         <ImageIcon size={20} />
                                     </div>
+                                    {template.isPrimary && (
+                                        <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'var(--accent-primary)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                            Primary
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="template-info" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div className="info-main">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                                             <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>{template.name}</h3>
-                                            <span className="category-tag" style={{ fontSize: '0.75rem', padding: '0.125rem 0.5rem', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '999px', color: 'var(--text-secondary)' }}>
-                                                {typeof template.categoryId === 'object'
-                                                    ? (template.categoryId.categoryName || template.categoryId.name)
-                                                    : (template.categoryName || 'Uncategorized')}
-                                            </span>
+                                            {template.templateType === 'image' && (
+                                                <span className="category-tag" style={{ fontSize: '0.75rem', padding: '0.125rem 0.5rem', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '999px', color: 'var(--text-secondary)' }}>
+                                                    {template.categoryId && typeof template.categoryId === 'object'
+                                                        ? (template.categoryId.categoryName || template.categoryId.name)
+                                                        : (template.categoryName || 'Uncategorized')}
+                                                </span>
+                                            )}
                                         </div>
-                                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{template.description}</p>
                                         <div style={{
                                             background: 'rgba(0, 0, 0, 0.2)',
                                             padding: '0.75rem',
@@ -298,10 +359,6 @@ const Templates: React.FC = () => {
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                                         <div style={{ fontSize: '0.8125rem', display: 'flex', gap: '1rem' }}>
-                                            <div>
-                                                <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Type:</span>
-                                                <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{template.templateType || 'video'}</span>
-                                            </div>
                                             <div>
                                                 <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Input:</span>
                                                 <span style={{ fontWeight: 600 }}>{template.inputType} ({template.noOfInput})</span>
@@ -330,7 +387,7 @@ const Templates: React.FC = () => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                title={editingTemplate ? 'Edit Template' : 'Add New Template'}
+                title={editingTemplate ? `Edit ${formData.templateType === 'video' ? 'Video' : 'Image'} Template` : `Add New ${activeTab === 'video' ? 'Video' : 'Image'} Template`}
                 footer={
                     <>
                         <button className="btn btn-secondary" onClick={handleCloseModal} disabled={isActionLoading}>Cancel</button>
@@ -342,9 +399,9 @@ const Templates: React.FC = () => {
                 }
             >
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: formData.templateType === 'image' ? '1fr 1fr' : '1fr', gap: '1rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Name</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Title</label>
                             <input
                                 type="text"
                                 className="input-field"
@@ -354,35 +411,27 @@ const Templates: React.FC = () => {
                                 disabled={isActionLoading}
                             />
                         </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Category</label>
-                            <select
-                                className="input-field"
-                                value={formData.categoryId}
-                                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                                required
-                                disabled={isActionLoading}
-                            >
-                                <option value="">Select Category</option>
-                                {categories.map(cat => (
-                                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {formData.templateType === 'image' && (
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Category</label>
+                                <select
+                                    className="input-field"
+                                    value={formData.categoryId}
+                                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                                    required
+                                    disabled={isActionLoading}
+                                >
+                                    <option value="">Select Category</option>
+                                    {categories.map(cat => (
+                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
+
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Description</label>
-                        <input
-                            type="text"
-                            className="input-field"
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            required
-                            disabled={isActionLoading}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Prompt Preset</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Prompt</label>
                         <textarea
                             className="input-field"
                             style={{ minHeight: '80px', resize: 'vertical' }}
@@ -393,7 +442,7 @@ const Templates: React.FC = () => {
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Template Preview Image</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Thumbnail (jpg / png)</label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {imagePreview && (
                                 <div style={{
@@ -430,48 +479,35 @@ const Templates: React.FC = () => {
                                     minHeight: '42px'
                                 }}>
                                     <Upload size={18} />
-                                    <span>{imageFile ? imageFile.name : (editingTemplate ? 'Change image...' : 'Choose image...')}</span>
+                                    <span>{imageFile ? imageFile.name : (editingTemplate ? 'Change thumbnail...' : 'Choose thumbnail...')}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Template Type</label>
-                            <select
-                                className="input-field"
-                                value={formData.templateType}
-                                onChange={(e) => setFormData({ ...formData, templateType: e.target.value })}
-                                disabled={isActionLoading}
-                            >
-                                <option value="video">Video</option>
-                                <option value="image">Image</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Input Type</label>
-                            <select
-                                className="input-field"
-                                value={formData.inputType}
-                                onChange={(e) => setFormData({ ...formData, inputType: e.target.value })}
-                                disabled={isActionLoading}
-                            >
-                                <option value="image">Image</option>
-                                <option value="text">Text</option>
-                                <option value="audio">Audio</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>No. of Inputs</label>
-                            <input
-                                type="number"
-                                className="input-field"
-                                value={formData.noOfInput}
-                                onChange={(e) => setFormData({ ...formData, noOfInput: parseInt(e.target.value) })}
-                                required
-                                disabled={isActionLoading}
+                    
+                    {formData.templateType === 'image' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input 
+                                type="checkbox" 
+                                id="isPrimary"
+                                checked={formData.isPrimary}
+                                onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
+                                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                             />
+                            <label htmlFor="isPrimary" style={{ fontSize: '0.875rem', cursor: 'pointer' }}>Mark as primary template for this category</label>
                         </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>No. of Inputs</label>
+                        <input
+                            type="number"
+                            className="input-field"
+                            value={formData.noOfInput}
+                            onChange={(e) => setFormData({ ...formData, noOfInput: parseInt(e.target.value) })}
+                            required
+                            disabled={isActionLoading}
+                        />
                     </div>
                 </form>
             </Modal>

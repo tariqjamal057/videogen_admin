@@ -7,7 +7,6 @@ import {
     CreditCard,
     PlayCircle,
     Users,
-    FileWarning,
     Receipt,
     Settings,
     LogOut,
@@ -53,7 +52,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         { path: '/templates', icon: PlayCircle, label: 'Templates' },
         { path: '/users', icon: Users, label: 'Users' },
         { path: '/videos', icon: Video, label: 'Videos' },
-        { path: '/reports', icon: FileWarning, label: 'Reports' },
+        // { path: '/reports', icon: FileWarning, label: 'Reports' },
         { path: '/transactions', icon: Receipt, label: 'Transactions' },
         { path: '/settings', icon: Settings, label: 'Settings' },
     ];

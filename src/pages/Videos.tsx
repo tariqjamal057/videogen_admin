@@ -152,7 +152,7 @@ const Videos: React.FC = () => {
                                                 <div className="progress-bar" style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
                                                     <div className="progress-fill" style={{ height: '100%', background: 'var(--accent-primary)', width: `${v.progress}%`, transition: 'width 0.5s ease' }}></div>
                                                 </div>
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{v.progress}%</span>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{Math.round(v.progress)}%</span>
                                             </div>
                                         </td>
                                         <td>{getStatusBadge(v.status)}</td>

@@ -159,9 +159,9 @@ const Plans: React.FC = () => {
                 <div className="plans-grid">
                     {plans.length > 0 ? (
                         plans.map((plan) => (
-                            <div key={plan._id} className={`plan-card card ${plan.mostPopular ? 'popular' : ''}`}>
-                                {plan.mostPopular && <div className="badge popular-badge">Most Popular</div>}
-                                {plan.bestValue && <div className="badge value-badge">Best Value</div>}
+                            <div key={plan._id} className={`plan-card card`}>
+                                {/* {plan.mostPopular && <div className="badge popular-badge">Most Popular</div>}
+                                {plan.bestValue && <div className="badge value-badge">Best Value</div>} */}
 
                                 <div className="plan-title">
                                     <h3>{plan.name}</h3>
@@ -271,7 +271,7 @@ const Plans: React.FC = () => {
                         />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0.5rem 0' }}>
+                    {/* <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0.5rem 0' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
                             <input
                                 type="checkbox"
@@ -292,7 +292,7 @@ const Plans: React.FC = () => {
                             />
                             Best Value
                         </label>
-                    </div>
+                    </div> */}
 
                     <div className="form-group">
                         <label className="form-label">Bullet Points (comma separated)</label>
